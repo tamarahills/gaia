@@ -295,6 +295,25 @@ var CallHandler = (function callHandler() {
           highPriorityWakeLock.unlock();
           CallLog.appendGroup(logGroup);
         });
+
+        if('secondNumber' in data) {
+          var entryCdmaSecond = {
+            date: Date.now() - parseInt(data.duration),
+            type: 'incoming',
+            number: data.secondNumber,
+            serviceId: data.serviceId,
+            emergency: false,
+            voicemail: isVoicemailNumber,
+            status: 'connected'
+          };
+
+          CallLogDBManager.add(entryCdmaSecond,
+            function(logGroupCdmaSecondCall) {
+            highPriorityWakeLock = navigator.requestWakeLock('high-priority');
+            highPriorityWakeLock.unlock();
+            CallLog.appendGroup(logGroupCdmaSecondCall);
+          });
+        }
       });
     });
    }
