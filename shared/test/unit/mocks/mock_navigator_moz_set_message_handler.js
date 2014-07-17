@@ -19,7 +19,8 @@ mozSetMessageHandler.mSetup = mozSetMessageHandler.mTeardown =
 
 mozSetMessageHandler.mTrigger = function msmh_trigger(name, message) {
   if (typeof messageHandlers[name] === 'function') {
-    messageHandlers[name](message);
+    console.log("foobar");
+      return messageHandlers[name](message);
   }
 };
 

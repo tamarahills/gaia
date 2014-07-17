@@ -171,12 +171,12 @@ suite('navigation bar', function() {
       });
     });
 
-    suite('> insertion in the call log database', function() {
+    suite.only('> insertion in the call log database', function() {
       var sysMsg;
       var addSpy;
 
       function triggerSysMsg(data) {
-        MockNavigatormozSetMessageHandler.mTrigger('telephony-call-ended',
+        return MockNavigatormozSetMessageHandler.mTrigger('telephony-call-ended',
                                                    data);
       }
 
@@ -313,18 +313,22 @@ suite('navigation bar', function() {
         sinon.assert.calledWith(appendSpy, fakeGroupCdma);
       });
 
-      test('should release the wake lock', function() {
+      test('should release the wake lock', function(done) {
         triggerSysMsg(sysMsg);
-        var wakeLock = MockNavigatorWakeLock.mLastWakeLock;
-        assert.isTrue(wakeLock.released);
+          console.log("before setTimeout");
+          setTimeout(function () {
+          var wakeLock = MockNavigatorWakeLock.mLastWakeLock;
+            console.log("calling setTimout:" + wakeLock.released);
+          assert.isTrue(wakeLock.released);
+          done();
+        }, 5);
       });
-
-      test('should release wake lock for cdma call waiting', function() {
+/*      test('should release wake lock for cdma call waiting', function() {
         sysMsg.secondNumber = '45678';
         triggerSysMsg(sysMsg);
         var wakeLock = MockNavigatorWakeLock.mLastWakeLock;
         assert.isTrue(wakeLock.released);
-      });
+      });*/
     });
 
     suite('> Receiving a ussd', function() {

@@ -270,52 +270,64 @@ var CallHandler = (function callHandler() {
   }
 
   function callEnded(data) {
-    var highPriorityWakeLock = navigator.requestWakeLock('high-priority');
-    var number = data.id ? data.id.number : data.number;
-    var incoming = data.direction === 'incoming';
+   //   return new Promise(function(r1, r2) {
+      var highPriorityWakeLock = navigator.requestWakeLock('high-priority');
+      var number = data.id ? data.id.number : data.number;
+      var incoming = data.direction === 'incoming';
 
-    NavbarManager.ensureResources(function() {
-      // Missed call
-      if (incoming && !data.duration) {
-        sendNotification(number, data.serviceId);
-      }
+      NavbarManager.ensureResources(function() {
+        // Missed call
+        if (incoming && !data.duration) {
+          sendNotification(number, data.serviceId);
+        }
 
-      Voicemail.check(number, function(isVoicemailNumber) {
-        var entry = {
-          date: Date.now() - parseInt(data.duration),
-          type: incoming ? 'incoming' : 'dialing',
-          number: number,
-          serviceId: data.serviceId,
-          emergency: data.emergency || false,
-          voicemail: isVoicemailNumber,
-          status: (incoming && data.duration > 0) ? 'connected' : null
-        };
-
-        CallLogDBManager.add(entry, function(logGroup) {
-          highPriorityWakeLock.unlock();
-          CallLog.appendGroup(logGroup);
-        });
-
-        if('secondNumber' in data) {
-          var entryCdmaSecond = {
+        Voicemail.check(number, function(isVoicemailNumber) {
+          var entry = {
             date: Date.now() - parseInt(data.duration),
-            type: 'incoming',
-            number: data.secondNumber,
+            type: incoming ? 'incoming' : 'dialing',
+            number: number,
             serviceId: data.serviceId,
-            emergency: false,
+            emergency: data.emergency || false,
             voicemail: isVoicemailNumber,
-            status: 'connected'
+            status: (incoming && data.duration > 0) ? 'connected' : null
           };
 
-          CallLogDBManager.add(entryCdmaSecond,
-            function(logGroupCdmaSecondCall) {
-            highPriorityWakeLock = navigator.requestWakeLock('high-priority');
-            highPriorityWakeLock.unlock();
-            CallLog.appendGroup(logGroupCdmaSecondCall);
+          var promises = [];
+          var pFirstCall  = new Promise(function(resolve, reject) {
+            CallLogDBManager.add(entry, function (logEntry) {
+              CallLog.appendGroup(logEntry);
+              resolve();
+            });
           });
-        }
-      });
-    });
+          promises.push(pFirstCall);
+
+          if(data.secondNumber) {
+            var pSecondCall = new Promise(function (resolve, reject) {
+              var entryCdmaSecond = {
+                date: Date.now() - parseInt(data.duration),
+                type: 'incoming',
+                number: data.secondNumber,
+                serviceId: data.serviceId,
+                emergency: false,
+                voicemail: isVoicemailNumber,
+                status: 'connected'
+              };
+              CallLogDBManager.add(entryCdmaSecond,
+              function(logGroupCdmaSecondCall) {
+                CallLog.appendGroup(logGroupCdmaSecondCall);
+                resolve();
+              });
+            });
+            promises.push(pSecondCall);
+          }
+
+          return Promise.all(promises).then(function() {
+              highPriorityWakeLock.unlock();
+          }, function() {
+              highPriorityWakeLock.unlock();
+          });
+        });
+      });//});
    }
 
   /* === postMessage support === */
