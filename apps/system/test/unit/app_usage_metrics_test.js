@@ -365,7 +365,6 @@ suite('AppUsageMetrics:', function() {
         unobserve: function() {}
       };
       window.performance.now = function() { return Date.now(); };
-//      MockNavigatorSettings.mSyncRepliesOnly = true;
 
       // Monitor UsageData calls
       var proto = AppUsageMetrics.UsageData.prototype;
@@ -704,9 +703,29 @@ suite('AppUsageMetrics:', function() {
       var mockSettings = MockNavigatorSettings.mSettings;
       mockSettings.x = '1';
       mockSettings.y = '2';
+      this.sinon = sinon.sandbox.create();
+//      this.sinon.stub(navigator.mozTelephony, 'dial', function() {
+//        return Promise.resolve({
+//          result: Promise.resolve({
+//            success: true,
+//            serviceCode: 'scImei',
+//            statusMessage: 'fakeImei'
+//          })
+//        });
+//      });
     });
 
     test('getSettings()', function(done) {
+      this.sinon.stub(navigator.mozTelephony, 'dial', function() {
+        return Promise.resolve({
+          result: Promise.resolve({
+            success: true,
+            serviceCode: 'scImei',
+            statusMessage: 'fakeImei'
+          })
+        });
+      });
+
       getSettings({x: '3', y: '4', z: '5'}, function(result) {
         done(assert.deepEqual(result, {x: '1', y: '2', z: '5'}));
       });
@@ -721,6 +740,15 @@ suite('AppUsageMetrics:', function() {
     });
 
     test('ftu.pingURL is used as a base URL by default', function(done) {
+      this.sinon.stub(navigator.mozTelephony, 'dial', function() {
+        return Promise.resolve({
+          result: Promise.resolve({
+            success: true,
+            serviceCode: 'scImei',
+            statusMessage: 'fakeImei'
+          })
+        });
+      });
       mockSettings['ftu.pingURL'] = 'foo://bar';
       aum.startCollecting(function() {
         assert.equal(AppUsageMetrics.REPORT_URL, 'foo://bar');
@@ -729,6 +757,15 @@ suite('AppUsageMetrics:', function() {
     });
 
     test('reportURL overrides ftu.pingURL', function(done) {
+      this.sinon.stub(navigator.mozTelephony, 'dial', function() {
+        return Promise.resolve({
+          result: Promise.resolve({
+            success: true,
+            serviceCode: 'scImei',
+            statusMessage: 'fakeImei'
+          })
+        });
+      });
       mockSettings['metrics.appusage.reportURL'] = 'foo://foo';
       aum.startCollecting(function() {
         assert.equal(AppUsageMetrics.REPORT_URL, 'foo://foo');
@@ -737,6 +774,15 @@ suite('AppUsageMetrics:', function() {
     });
 
     test('other settings', function(done) {
+      this.sinon.stub(navigator.mozTelephony, 'dial', function() {
+        return Promise.resolve({
+          result: Promise.resolve({
+            success: true,
+            serviceCode: 'scImei',
+            statusMessage: 'fakeImei'
+          })
+        });
+      });
       mockSettings['metrics.appusage.reportInterval'] = 97;
       mockSettings['metrics.appusage.reportTimeout'] = 98;
       mockSettings['metrics.appusage.retryInterval'] = 99;
@@ -852,6 +898,15 @@ suite('AppUsageMetrics:', function() {
     var app1, homescreen;
 
     setup(function(done) {
+      this.sinon.stub(navigator.mozTelephony, 'dial', function() {
+        return Promise.resolve({
+          result: Promise.resolve({
+            success: true,
+            serviceCode: 'scImei',
+            statusMessage: 'fakeImei'
+          })
+        });
+      });
       // Use fakes
       clock = this.sinon.useFakeTimers();
       XHR = sinon.useFakeXMLHttpRequest();
