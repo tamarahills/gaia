@@ -1,7 +1,8 @@
 'use strict';
 
 /* global AppUsageMetrics, MockasyncStorage, MockNavigatorSettings,
-          MockSIMSlotManager, MockAppsMgmt, MockApp, MockApplications */
+          MockSIMSlotManager, MockAppsMgmt, MockApp, MockApplications,
+          MockNavigatorMozTelephony */
 
 
 require('/shared/js/settings_listener.js');
@@ -17,6 +18,7 @@ require('/shared/test/unit/mocks/mock_simslot.js');
 requireApp('system/test/unit/mock_apps_mgmt.js');
 requireApp('system/test/unit/mock_app.js');
 requireApp('system/test/unit/mock_applications.js');
+require('/shared/test/unit/mocks/mock_navigator_moz_telephony.js');
 
 /*
  * This test suite has several sub-suites that verify that:
@@ -30,7 +32,7 @@ requireApp('system/test/unit/mock_applications.js');
  */
 suite('AppUsageMetrics:', function() {
   var realMozSettings, realOnLine, realSIMSlotManager, realPerformanceNow,
-      realMozApps, realApplications;
+      realMozApps, realApplications, realMozTelephony;
   var isOnLine = true;
 
   function navigatorOnLine() {
@@ -45,9 +47,11 @@ suite('AppUsageMetrics:', function() {
     realMozSettings = navigator.mozSettings;
     realSIMSlotManager = window.SIMSlotManager;
     realMozApps = navigator.mozApps;
+    realMozTelephony = navigator.mozTelephony;
     navigator.mozSettings = MockNavigatorSettings;
     window.asyncStorage = MockasyncStorage;
     window.SIMSlotManager = MockSIMSlotManager;
+    navigator.mozTelephony = MockNavigatorMozTelephony;
 
     navigator.mozApps = { mgmt: MockAppsMgmt };
     navigator.addIdleObserver = function(o) {
@@ -361,7 +365,7 @@ suite('AppUsageMetrics:', function() {
         unobserve: function() {}
       };
       window.performance.now = function() { return Date.now(); };
-
+//      MockNavigatorSettings.mSyncRepliesOnly = true;
 
       // Monitor UsageData calls
       var proto = AppUsageMetrics.UsageData.prototype;
@@ -388,6 +392,15 @@ suite('AppUsageMetrics:', function() {
       attention1 = new MockApp({ manifest: { type: 'certified' } });
 
       clock = this.sinon.useFakeTimers();
+      this.sinon.stub(navigator.mozTelephony, 'dial', function() {
+        return Promise.resolve({
+          result: Promise.resolve({
+            success: true,
+            serviceCode: 'scImei',
+            statusMessage: 'fakeImei'
+          })
+        });
+      });
     });
 
     teardown(function() {

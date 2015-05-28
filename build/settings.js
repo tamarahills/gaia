@@ -293,6 +293,12 @@ function execute(config) {
     settings['lockscreen.locked'] = false;
   }
 
+  if (config.DOGFOOD === '1') {
+    settings['debug.performance_data.dogfooding'] = '1';
+    settings['metrics.appusage.reportInterval'] = 2 * 60 * 1000;
+  }
+
+
   var screenTimeout = parseInt(config.SCREEN_TIMEOUT, 10);
   if (screenTimeout >= 0) {
     settings['screen.timeout'] = screenTimeout;

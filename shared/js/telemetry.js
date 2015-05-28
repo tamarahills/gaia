@@ -10,7 +10,7 @@
   const TR = TelemetryRequest;
 
   // Set to true to enable debugging
-  TR.DEBUG = false;
+  TR.DEBUG = true;
 
   // Create an XHR for the FxOS Telemetry Server.
   // Arguments:

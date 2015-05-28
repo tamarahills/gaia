@@ -56,6 +56,7 @@
   // This is the asyncStorage key we use to persist our device ID
   // v1 of this ID used a randomly generated String, while v2 uses a UUID
   const DEVICE_ID_KEY = 'metrics.app_usage.deviceID.v2';
+  const IMEI_KEY = 'metrics.app_usage.imei';
 
   // Various event types we use. Constants here to be sure we use the
   // same values when registering, unregistering and handling these.
@@ -117,7 +118,7 @@
   AUM.UsageData = UsageData;
 
   // Set to true to to enable debug output
-  AUM.DEBUG = false;
+  AUM.DEBUG = true;
 
   // This logging function is the only thing that is not exposed through
   // the AppUsageMetrics contstructor or its instance.
@@ -131,6 +132,9 @@
   // What setting do we listen to to turn app usage metrics on or off.
   // This default value is the same setting that turns telemetry on and off.
   AUM.TELEMETRY_ENABLED_KEY = 'debug.performance_data.shared';
+
+  // For Dogfooders
+  AUM.ISDOGFOODER = false;
 
   // Base URL for sending data reports
   // Can be overridden with metrics.appusage.reportURL setting.
@@ -297,9 +301,22 @@
         self.metrics = loadedMetrics;
 
         // Now move on to step two in the startup process
-        getDeviceID();
+        getConfigurationSettings();
       });
     }
+
+    function getDogfooderSetting() {
+      if(AUM.ISDOGFOODER) {
+        debug('TAMARA - DOGFOODER');
+        return getImeiCode().then(function(value) {
+          getDeviceID();
+        });
+      } else {
+        debug('TAMARA - NOT DOGFOODER');
+        getDeviceID();
+      }
+    }
+
 
     // Step 2: Look up, or generate a unique identifier for this device
     // so that the periodic metrics reports we send can be linked together
@@ -307,7 +324,8 @@
     // off telemetry we will delete this id, so that if it is turned back
     // on, they start off with a clean history
     function getDeviceID() {
-      asyncStorage.getItem(DEVICE_ID_KEY, function(value) {
+      var storageKey = AUM.ISDOGFOODER ? IMEI_KEY : DEVICE_ID_KEY;
+      asyncStorage.getItem(storageKey, function(value) {
         if (value) {
           self.deviceID = value;
         }
@@ -318,7 +336,23 @@
         }
 
         // Move on to the next step in the startup process
-        getConfigurationSettings();
+        waitForApplicationsReady();
+      });
+    }
+
+    function getImeiCode() {
+      var dialPromise = navigator.mozTelephony.dial('*#06#', 0);
+      return dialPromise.then(function about_dialImeiPromise(call) {
+        return call.result.then(function (result) {
+          if (result && result.success && (result.serviceCode === 'scImei')) {
+            asyncStorage.setItem(IMEI_KEY, result.statusMessage);
+            return result.statusMessage;
+          } else {
+            var errorMsg = 'Could not retrieve the IMEI code for SIM ';
+            debug(errorMsg);
+            return Promise.reject(new Error(errorMsg));
+          }
+        });
       });
     }
 
@@ -331,7 +365,8 @@
         'metrics.appusage.reportURL': null,
         'metrics.appusage.reportInterval': AUM.REPORT_INTERVAL,
         'metrics.appusage.reportTimeout': AUM.REPORT_TIMEOUT,
-        'metrics.appusage.retryInterval': AUM.RETRY_INTERVAL
+        'metrics.appusage.retryInterval': AUM.RETRY_INTERVAL,
+        'debug.performance_data.dogfooding': '0'
       };
 
       AUM.getSettings(query, function(result) {
@@ -341,9 +376,15 @@
         AUM.REPORT_INTERVAL = result['metrics.appusage.reportInterval'];
         AUM.REPORT_TIMEOUT = result['metrics.appusage.reportTimeout'];
         AUM.RETRY_INTERVAL = result['metrics.appusage.retryInterval'];
+        AUM.ISDOGFOODER = result['debug.performance_data.dogfooding'];
+        debug('RETURNED VALUE: ' + AUM.ISDOGFOODER);
+        if(AUM.ISDOGFOODER === '1') {
+          debug('SETTING DOGFOODER TO TRUE');
+          AUM.ISDOGFOODER = true;
+        }
 
         // Move on to the next step in the startup process
-        waitForApplicationsReady();
+        getDogfooderSetting();
       });
     }
 
